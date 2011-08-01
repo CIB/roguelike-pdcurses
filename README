@@ -1,48 +1,9 @@
-Welcome to PDCurses!
-====================
+For the original README, see README.previous
 
-Public Domain Curses, aka PDCurses, is an implementation of X/Open 
-curses for multiple platforms. The latest version can be found at:
+My changes are released under the public domain.
 
-   http://pdcurses.sourceforge.net/
+This package modifies the package in sdl1/ to include support for tilesets. Characters that have the A_INVIS(now mapped to A_TILESET) attribute set will be interpreted differently. To be specific, the two least significant bytes will be interpreted as tileset identifier, resulting in up to ~65k different tiles.
 
-For changes, see the HISTORY file.
+Another change is that the fontfile now must include 16x16 characters, rather than 32x8. This means that you must supply a new pdcfont.bmp, since I didn't update the default one in code. Generally, fonts from e.g. DwarfFortress will be compatible as long as you convert them to 1-bit(2 color indexed mode in GIMP) bitmaps.
 
-
-Legal Stuff
------------
-
-The core package is in the public domain, but small portions of PDCurses 
-are subject to copyright under various licenses.  Each directory 
-contains a README file, with a section titled "Distribution Status" 
-which describes the status of the files in that directory.
-
-If you use PDCurses in an application, an acknowledgement would be 
-appreciated, but is not mandatory. If you make corrections or 
-enhancements to PDCurses, please forward them to the current maintainer 
-for the benefit of other users.
-
-This software is provided AS IS with NO WARRANTY whatsoever.
-
-
-Ports
------
-
-PDCurses has been ported to DOS, OS/2, Win32, X11 and SDL. A directory 
-containing the port-specific source files exists for each of these 
-platforms. Build instructions are in the README file for each platform.
-
-
-Distribution Status
--------------------
-
-All files in this directory except configure, config.guess and 
-config.sub are released to the Public Domain. config.guess and 
-config.sub are under the GPL; configure is under a free license 
-described within it.
-
-
-Maintainer
-----------
-
-William McBrine <wmcbrine@users.sf.net>
+The tileset will be read from tileset.bmp, if present. tileset.bmp must have the same width and glyph size as pdcfont.bmp, however the height can be arbitrary, allowing for an arbitrary amount of glyphs. Because of the way pdcurses processes small characters like 0x01, tileset indexing starts at 0x80, so the glyph on the tileset would be drawn by calling addch(A_TILESET | 0x80)
