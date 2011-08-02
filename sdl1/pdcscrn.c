@@ -8,14 +8,111 @@ RCSID("$Id: pdcscrn.c,v 1.34 2008/07/14 04:24:52 wmcbrine Exp $")
 #include "deffont.h"
 #include "deficon.h"
 
-SDL_Surface *pdc_screen = NULL, *pdc_font = NULL, *pdc_icon = NULL,
-            *pdc_back = NULL, *pdc_tileback = NULL, *pdc_tileset = NULL;
+SDL_Surface *pdc_screen = NULL, *pdc_font = NULL, *pdc_unscaled_font = NULL, 
+			*pdc_icon = NULL, *pdc_back = NULL, *pdc_tileback = NULL, 
+			*pdc_unscaled_tileset = NULL, *pdc_tileset = NULL;
 int pdc_sheight = 0, pdc_swidth = 0, pdc_yoffset = 0, pdc_xoffset = 0;
 
 SDL_Color pdc_color[16];
 Uint32 pdc_mapped[16];
 int pdc_fheight, pdc_fwidth, pdc_flastc;
 bool pdc_own_screen;
+
+// copypasted from http://www.libsdl.org/cgi/docwiki.cgi/Pixel_Access
+Uint32 getpixel(SDL_Surface *surface, int x, int y)
+{
+    int bpp = surface->format->BytesPerPixel;
+    /* Here p is the address to the pixel we want to retrieve */
+    Uint8 *p = (Uint8 *)surface->pixels + y * surface->pitch + x * bpp;
+
+    switch(bpp) {
+    case 1:
+        return *p;
+        break;
+
+    case 2:
+        return *(Uint16 *)p;
+        break;
+
+    case 3:
+        if(SDL_BYTEORDER == SDL_BIG_ENDIAN)
+            return p[0] << 16 | p[1] << 8 | p[2];
+        else
+            return p[0] | p[1] << 8 | p[2] << 16;
+        break;
+
+    case 4:
+        return *(Uint32 *)p;
+        break;
+
+    default:
+        return 0;       /* shouldn't happen, but avoids warnings */
+    }
+}
+void putpixel(SDL_Surface *surface, int x, int y, Uint32 pixel)
+{
+    int bpp = surface->format->BytesPerPixel;
+    /* Here p is the address to the pixel we want to set */
+    Uint8 *p = (Uint8 *)surface->pixels + y * surface->pitch + x * bpp;
+
+    switch(bpp) {
+    case 1:
+        *p = pixel;
+        break;
+
+    case 2:
+        *(Uint16 *)p = pixel;
+        break;
+
+    case 3:
+        if(SDL_BYTEORDER == SDL_BIG_ENDIAN) {
+            p[0] = (pixel >> 16) & 0xff;
+            p[1] = (pixel >> 8) & 0xff;
+            p[2] = pixel & 0xff;
+        } else {
+            p[0] = pixel & 0xff;
+            p[1] = (pixel >> 8) & 0xff;
+            p[2] = (pixel >> 16) & 0xff;
+        }
+        break;
+
+    case 4:
+        *(Uint32 *)p = pixel;
+        break;
+    }
+}
+
+// copypasted from http://www.sdltutorials.com/sdl-scale-surface/
+SDL_Surface* ScaleSurface(SDL_Surface *Surface, Uint16 Width, Uint16 Height)
+{
+	printf("Trying to stretch.\n");
+	printf("Values %d %d %d\n",(int)Surface, Width, Height);
+    if(!Surface || !Width || !Height)
+        return 0;
+   
+    SDL_Surface *_ret = SDL_CreateRGBSurface(Surface->flags, Width, Height, Surface->format->BitsPerPixel,
+        Surface->format->Rmask, Surface->format->Gmask, Surface->format->Bmask, Surface->format->Amask);
+	_ret->format->palette = Surface->format->palette;
+
+    double  _stretch_factor_x = ( ((double) Width )  / ((double)Surface->w)),
+        _stretch_factor_y = ( ((double) Height) / ( (double) Surface->h) );
+		
+	printf("Blah");
+	printf("Stretching by %fx%f\n",_stretch_factor_x, _stretch_factor_y);
+	
+	Sint32 y;
+	Sint32 x;
+	Sint32 o_y;
+	Sint32 o_x;
+    for(y = 0; y < Surface->h; y++)
+        for(x = 0; x < Surface->w; x++)
+            for(o_y = 0; o_y < _stretch_factor_y; ++o_y)
+                for(o_x = 0; o_x < _stretch_factor_x; ++o_x)
+                    putpixel(_ret, ( (Sint32) (_stretch_factor_x * x)) + o_x,
+                        ((Sint32) (_stretch_factor_y * y)) + o_y, getpixel(Surface, x, y));
+
+    return _ret;
+}
 
 /* COLOR_PAIR to attribute encoding table. */
 
@@ -91,7 +188,16 @@ int PDC_scr_open(int argc, char **argv)
     if (!pdc_font)
     {
         const char *fname = getenv("PDC_FONT");
-        pdc_font = SDL_LoadBMP(fname ? fname : "pdcfont.bmp");
+        pdc_unscaled_font = SDL_LoadBMP(fname ? fname : "pdcfont.bmp");
+		
+		pdc_fwidth = pdc_swidth / 80;
+		pdc_fheight = pdc_sheight / 25;
+		if(!pdc_fwidth || !pdc_fheight) {
+			SDL_VideoInfo* info = SDL_GetVideoInfo();
+			pdc_fwidth = (info->current_w - 10) / 80;
+			pdc_fheight = pdc_fwidth * 4 / 3;
+		}
+		pdc_font = ScaleSurface(pdc_unscaled_font, pdc_fwidth*16, pdc_fheight*16);
     }
 
     if (!pdc_font)
@@ -104,18 +210,9 @@ int PDC_scr_open(int argc, char **argv)
     }
 	
 	if(!pdc_tileset) {
-		printf("Trying to load tileset.bmp\n");
-		SDL_Surface* tmp = SDL_LoadBMP("tileset.bmp");
-		if(tmp) {
-			printf("Loaded, trying to ocnvert\n");
-			pdc_tileset = SDL_DisplayFormat( tmp );
-			if(!pdc_tileset) {
-				fprintf(stderr, "Couldn't optimize tileset for drawing.\n");
-				pdc_tileset = tmp;
-			} else {
-				free(tmp);
-			}
-		}
+		pdc_unscaled_tileset = SDL_LoadBMP("tileset.bmp");
+		double scale = ((double) pdc_fwidth * 16) / pdc_unscaled_tileset->w; 
+		pdc_tileset = ScaleSurface(pdc_unscaled_tileset, pdc_fwidth * 16, (int) (scale * pdc_unscaled_tileset->h));
 	}
 	if(!pdc_tileset) {
 		fprintf(stderr, "Could not load tileset\n");
@@ -248,6 +345,15 @@ int PDC_resize_screen(int nlines, int ncols)
 
     SP->resized = FALSE;
     SP->cursrow = SP->curscol = 0;
+	
+	pdc_fwidth = pdc_swidth / 80;
+	pdc_fheight = pdc_sheight / 25;
+	if(!pdc_fwidth || !pdc_fheight) {
+		pdc_fwidth = pdc_screen->w / 80;
+		pdc_fheight = pdc_screen->h / 3;
+	}
+	free(pdc_font);
+	pdc_font = ScaleSurface(pdc_unscaled_font, pdc_fwidth*16, pdc_fheight*16);
 
     return OK;
 }

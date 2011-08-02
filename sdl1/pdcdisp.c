@@ -312,9 +312,9 @@ void PDC_transform_line(int lineno, int x, int len, const chtype *srcp)
 			Uint32 colorkey = SDL_MapRGB(pdc_tileset->format, 0, 0, 0);
 			SDL_SetColorKey(pdc_tileset, SDL_SRCCOLORKEY | SDL_RLEACCEL, colorkey);
 			//src.y -= pdc_fheight * 2;
-			SDL_LowerBlit(pdc_tileset, &src, pdc_screen, &dest);
+			SDL_UpperBlit(pdc_tileset, &src, pdc_screen, &dest);
 		} else {
-			SDL_LowerBlit(pdc_font, &src, pdc_screen, &dest);
+			SDL_UpperBlit(pdc_font, &src, pdc_screen, &dest);
 
 			if (ch & (A_UNDERLINE|A_LEFTLINE|A_RIGHTLINE))
 				_highlight(&src, &dest, ch);
