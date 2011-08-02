@@ -104,11 +104,26 @@ int PDC_scr_open(int argc, char **argv)
     }
 	
 	if(!pdc_tileset) {
-		pdc_tileset = SDL_LoadBMP("tileset.bmp");
+		printf("Trying to load tileset.bmp\n");
+		SDL_Surface* tmp = SDL_LoadBMP("tileset.bmp");
+		if(tmp) {
+			printf("Loaded, trying to ocnvert\n");
+			pdc_tileset = SDL_DisplayFormat( tmp );
+			if(!pdc_tileset) {
+				fprintf(stderr, "Couldn't optimize tileset for drawing.\n");
+				pdc_tileset = tmp;
+			} else {
+				free(tmp);
+			}
+		}
 	}
 	if(!pdc_tileset) {
 		fprintf(stderr, "Could not load tileset\n");
 		// we can still go on without tileset
+	} else {
+		// configure the image in memory
+		Uint32 colorkey = SDL_MapRGB(pdc_tileset->format, 0, 0, 0);
+		SDL_SetColorKey(pdc_tileset, SDL_SRCCOLORKEY | SDL_RLEACCEL, colorkey);
 	}
 	
 

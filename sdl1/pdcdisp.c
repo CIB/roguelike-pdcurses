@@ -282,6 +282,7 @@ void PDC_transform_line(int lineno, int x, int len, const chtype *srcp)
 
 		int tileset = 0;
 		if(ch & A_TILESET) {
+			bo
 			ch = (ch & 0x0000ffff) - 0x80;
 			tileset = 1;
 		}
@@ -298,6 +299,10 @@ void PDC_transform_line(int lineno, int x, int len, const chtype *srcp)
 			SDL_LowerBlit(pdc_tileback, &dest, pdc_screen, &dest);
 
 		if(tileset) {
+		
+			// configure the image in memory
+			Uint32 colorkey = SDL_MapRGB(pdc_tileset->format, 0, 0, 0);
+			SDL_SetColorKey(pdc_tileset, SDL_SRCCOLORKEY | SDL_RLEACCEL, colorkey);
 			//src.y -= pdc_fheight * 2;
 			SDL_LowerBlit(pdc_tileset, &src, pdc_screen, &dest);
 		} else {
