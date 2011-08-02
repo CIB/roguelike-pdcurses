@@ -193,9 +193,8 @@ int PDC_scr_open(int argc, char **argv)
 		pdc_fwidth = pdc_swidth / 80;
 		pdc_fheight = pdc_sheight / 25;
 		if(!pdc_fwidth || !pdc_fheight) {
-			SDL_VideoInfo* info = SDL_GetVideoInfo();
-			pdc_fwidth = (info->current_w - 10) / 80;
-			pdc_fheight = pdc_fwidth * 4 / 3;
+			pdc_fwidth = 12;
+			pdc_fheight = 16;
 		}
 		pdc_font = ScaleSurface(pdc_unscaled_font, pdc_fwidth*16, pdc_fheight*16);
     }
@@ -211,8 +210,10 @@ int PDC_scr_open(int argc, char **argv)
 	
 	if(!pdc_tileset) {
 		pdc_unscaled_tileset = SDL_LoadBMP("tileset.bmp");
-		double scale = ((double) pdc_fwidth * 16) / pdc_unscaled_tileset->w; 
-		pdc_tileset = ScaleSurface(pdc_unscaled_tileset, pdc_fwidth * 16, (int) (scale * pdc_unscaled_tileset->h));
+		if(pdc_unscaled_tileset) {
+			double scale = ((double) pdc_fwidth * 16) / pdc_unscaled_tileset->w; 
+			pdc_tileset = ScaleSurface(pdc_unscaled_tileset, pdc_fwidth * 16, (int) (scale * pdc_unscaled_tileset->h));
+		}
 	}
 	if(!pdc_tileset) {
 		fprintf(stderr, "Could not load tileset\n");
