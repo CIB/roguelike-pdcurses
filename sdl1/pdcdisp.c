@@ -281,8 +281,9 @@ void PDC_transform_line(int lineno, int x, int len, const chtype *srcp)
         chtype ch = srcp[j];
 
 		int tileset = 0;
+		int highlight = 0;
 		if(ch & A_TILESET) {
-			bo
+			highlight = ch & A_BOLD;
 			ch = (ch & 0x0000ffff) - 0x80;
 			tileset = 1;
 		}
@@ -293,13 +294,20 @@ void PDC_transform_line(int lineno, int x, int len, const chtype *srcp)
             ch = (ch & (A_ATTRIBUTES ^ A_ALTCHARSET)) | acs_map[ch & 0x7f];
 #endif
 
-        src.x = (ch & 0xff) % 16 * pdc_fwidth;
-        src.y = (ch & 0xff) / 16 * pdc_fheight;
+		if(!tileset) {
+			src.x = (ch & 0xff) % 16 * pdc_fwidth;
+			src.y = (ch & 0xff) / 16 * pdc_fheight;
+		} else {
+			src.x = (ch & 0xffff) % 16 * pdc_fwidth;
+			src.y = (ch & 0xffff) / 16 * pdc_fheight;
+		}
 		if (backgr == -1)
 			SDL_LowerBlit(pdc_tileback, &dest, pdc_screen, &dest);
 
 		if(tileset) {
-		
+			if(highlight) {
+				SDL_FillRect(pdc_tileset, &dest, SDL_MapRGB(pdc_tileset->format, 0, 0, 255));
+			}
 			// configure the image in memory
 			Uint32 colorkey = SDL_MapRGB(pdc_tileset->format, 0, 0, 0);
 			SDL_SetColorKey(pdc_tileset, SDL_SRCCOLORKEY | SDL_RLEACCEL, colorkey);
