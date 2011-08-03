@@ -384,6 +384,8 @@ int pdc_toggle_fullscreen() {
 		pdc_tileset = ScaleSurface(pdc_unscaled_tileset, pdc_fwidth * 16, (int) (scale * pdc_unscaled_tileset->h));
 	}
 	
+	pdc_yoffset = (pdc_screen->h - pdc_fheight * 25) / 2;
+	
 	return 1;
 }
 
