@@ -12,6 +12,7 @@ SDL_Surface *pdc_screen = NULL, *pdc_font = NULL, *pdc_unscaled_font = NULL,
 			*pdc_icon = NULL, *pdc_back = NULL, *pdc_tileback = NULL, 
 			*pdc_unscaled_tileset = NULL, *pdc_tileset = NULL;
 int pdc_sheight = 0, pdc_swidth = 0, pdc_yoffset = 0, pdc_xoffset = 0;
+static int is_fullscreen = 0, pdc_desktop_width = 0, pdc_desktop_height = 0;
 
 SDL_Color pdc_color[16];
 Uint32 pdc_mapped[16];
@@ -85,8 +86,6 @@ void putpixel(SDL_Surface *surface, int x, int y, Uint32 pixel)
 // copypasted from http://www.sdltutorials.com/sdl-scale-surface/
 SDL_Surface* ScaleSurface(SDL_Surface *Surface, Uint16 Width, Uint16 Height)
 {
-	printf("Trying to stretch.\n");
-	printf("Values %d %d %d\n",(int)Surface, Width, Height);
     if(!Surface || !Width || !Height)
         return 0;
    
@@ -96,9 +95,6 @@ SDL_Surface* ScaleSurface(SDL_Surface *Surface, Uint16 Width, Uint16 Height)
 
     double  _stretch_factor_x = ( ((double) Width )  / ((double)Surface->w)),
         _stretch_factor_y = ( ((double) Height) / ( (double) Surface->h) );
-		
-	printf("Blah");
-	printf("Stretching by %fx%f\n",_stretch_factor_x, _stretch_factor_y);
 	
 	Sint32 y;
 	Sint32 x;
@@ -184,6 +180,11 @@ int PDC_scr_open(int argc, char **argv)
 
         atexit(SDL_Quit);
     }
+	
+
+	const SDL_VideoInfo* info = SDL_GetVideoInfo();
+	pdc_desktop_width = info->current_w;
+	pdc_desktop_height = info->current_h;
 
     if (!pdc_font)
     {
@@ -346,18 +347,46 @@ int PDC_resize_screen(int nlines, int ncols)
 
     SP->resized = FALSE;
     SP->cursrow = SP->curscol = 0;
-	
-	pdc_fwidth = pdc_swidth / 80;
-	pdc_fheight = pdc_sheight / 25;
-	if(!pdc_fwidth || !pdc_fheight) {
-		pdc_fwidth = pdc_screen->w / 80;
-		pdc_fheight = pdc_screen->h / 3;
-	}
-	free(pdc_font);
-	pdc_font = ScaleSurface(pdc_unscaled_font, pdc_fwidth*16, pdc_fheight*16);
 
     return OK;
 }
+
+int pdc_toggle_fullscreen() {
+    SDL_FreeSurface(pdc_screen);
+
+	// switch between fullscreen/windowed mode
+	if(!is_fullscreen) {
+	
+		is_fullscreen = 1;
+		pdc_swidth = pdc_screen->w;
+		pdc_sheight = pdc_screen->h;
+		
+		pdc_screen = SDL_SetVideoMode(pdc_desktop_width, pdc_desktop_height, 0,
+			SDL_SWSURFACE|SDL_ANYFORMAT|SDL_FULLSCREEN);
+	} else {
+		is_fullscreen = 0;
+		pdc_screen = SDL_SetVideoMode(pdc_swidth, pdc_sheight, 0,
+			SDL_SWSURFACE|SDL_ANYFORMAT);
+	}
+	
+	// update the screen and the buffers
+    if (pdc_tileback)
+        PDC_retile();
+
+	pdc_fwidth = pdc_screen->w / 80;
+	pdc_fheight = pdc_fwidth * 4 / 3;
+	free(pdc_font);
+	pdc_font = ScaleSurface(pdc_unscaled_font, pdc_fwidth*16, pdc_fheight*16);
+	
+	if(pdc_unscaled_tileset) {
+		double scale = ((double) pdc_fwidth * 16) / pdc_unscaled_tileset->w; 
+		free(pdc_tileset);
+		pdc_tileset = ScaleSurface(pdc_unscaled_tileset, pdc_fwidth * 16, (int) (scale * pdc_unscaled_tileset->h));
+	}
+	
+	return 1;
+}
+
 
 void PDC_reset_prog_mode(void)
 {
