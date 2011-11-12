@@ -7,3 +7,20 @@ This package modifies the package in sdl1/ to include support for tilesets. Char
 Another change is that the fontfile now must include 16x16 characters, rather than 32x8. This means that you must supply a new pdcfont.bmp, since I didn't update the default one in code. Generally, fonts from e.g. DwarfFortress will be compatible as long as you convert them to 1-bit(2 color indexed mode in GIMP) bitmaps.
 
 The tileset will be read from tileset.bmp, if present. tileset.bmp must have the same width and glyph size as pdcfont.bmp, however the height can be arbitrary, allowing for an arbitrary amount of glyphs. Because of the way pdcurses processes small characters like 0x01, tileset indexing starts at 0x80, so the first glyph on the tileset would be drawn by calling addch(A_TILESET | 0x80)
+
+Build/Installation Instructions
+===============================
+
+Windows
+-------
+* Get MinGW from http://sourceforge.net/projects/mingw/files/Automated MinGW Installer/mingw-get/
+* Get the SDL dev package for windows from http://www.libsdl.org/release/SDL-devel-1.2.14-mingw32.tar.gz
+* Install MinGW to a folder of your liking. Unpack the contents of SDL/bin, SDL/lib and SDL/include into the respective MinGW folders.
+* Open the MSYS shell. Navigate to roguelike-pdcurses/sdl1 and type "make".
+* Copy libpdcurses.a to your MinGW/lib folder.
+
+Unix-based
+----------
+* Install the SDL development files.
+* Navigate to roguelike-pdcurses/sdl1 and type "make".
+* Copy libpdcurses.a somewhere where it's accessible to your compiler.
