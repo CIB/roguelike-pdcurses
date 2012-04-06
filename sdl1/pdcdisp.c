@@ -235,6 +235,32 @@ static void _highlight(SDL_Rect *src, SDL_Rect *dest, chtype ch)
     }
 }
 
+void PDC_draw_object(int y, int x, int ch, int alpha) {
+    SDL_Rect src, dest;
+
+    src.x = (ch & 0xffff) % 16 * pdc_fwidth;
+    src.y = (ch & 0xffff) / 16 * pdc_fheight; 
+    src.h = pdc_fheight;
+    src.w = pdc_fwidth;  
+
+    dest.y = pdc_fheight * y + pdc_yoffset;
+    dest.x = pdc_fwidth * x + pdc_xoffset;
+    dest.h = pdc_fheight;
+    dest.w = pdc_fwidth;
+    
+    if (backgr == -1)
+        SDL_LowerBlit(pdc_tileback, &dest, pdc_screen, &dest);
+
+    if(alpha) {
+        // configure the image in memory
+        Uint32 colorkey = SDL_MapRGB(pdc_tileset->format, 0, 0, 0);
+        SDL_SetColorKey(pdc_tileset, SDL_SRCCOLORKEY | SDL_RLEACCEL, colorkey);
+    } else {
+        SDL_SetColorKey(pdc_tileset, 0, 0);
+    }
+    SDL_UpperBlit(pdc_tileset, &src, pdc_screen, &dest);
+}
+
 /* update the given physical line to look like the corresponding line in
    curscr */
 
@@ -282,8 +308,10 @@ void PDC_transform_line(int lineno, int x, int len, const chtype *srcp)
 
 		int tileset = 0;
 		int highlight = 0;
+        int alpha = 0;
 		if(ch & A_TILESET) {
 			highlight = ch & A_BOLD;
+            alpha = ch & 0x8000;
 			ch = (ch & 0x0000ffff) - 0x80;
 			tileset = 1;
 		}
@@ -306,11 +334,15 @@ void PDC_transform_line(int lineno, int x, int len, const chtype *srcp)
 
 		if(tileset) {
 			if(highlight) {
-				SDL_FillRect(pdc_tileset, &dest, SDL_MapRGB(pdc_tileset->format, 0, 0, 255));
+				SDL_FillRect(pdc_screen, &dest, SDL_MapRGB(pdc_tileset->format, 0, 0, 255));
 			}
-			// configure the image in memory
-			Uint32 colorkey = SDL_MapRGB(pdc_tileset->format, 0, 0, 0);
-			SDL_SetColorKey(pdc_tileset, SDL_SRCCOLORKEY | SDL_RLEACCEL, colorkey);
+            if(alpha) {
+                // configure the image in memory
+                Uint32 colorkey = SDL_MapRGB(pdc_tileset->format, 0, 0, 0);
+                SDL_SetColorKey(pdc_tileset, SDL_SRCCOLORKEY | SDL_RLEACCEL, colorkey);
+            } else {
+                SDL_SetColorKey(pdc_tileset, 0, 0);
+            }
 			//src.y -= pdc_fheight * 2;
 			SDL_UpperBlit(pdc_tileset, &src, pdc_screen, &dest);
 		} else {
