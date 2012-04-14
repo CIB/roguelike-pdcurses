@@ -169,8 +169,8 @@ void PDC_gotoyx(int row, int col)
     dest.y = (row + 1) * pdc_fheight - src.h + pdc_yoffset;
     dest.x = col * pdc_fwidth + pdc_xoffset;
 
-    src.x = (ch & 0xff) % 32 * pdc_fwidth;
-    src.y = (ch & 0xff) / 32 * pdc_fheight + (pdc_fheight - src.h);
+    src.x = (ch & 0xff) % 16 * pdc_fwidth;
+    src.y = (ch & 0xff) / 16 * pdc_fheight + (pdc_fheight - src.h);
 
     SDL_BlitSurface(pdc_font, &src, pdc_screen, &dest);
 
@@ -198,8 +198,8 @@ static void _highlight(SDL_Rect *src, SDL_Rect *dest, chtype ch)
             SDL_SetPalette(pdc_font, SDL_LOGPAL,
                            pdc_color + col, pdc_flastc, 1);
 
-        src->x = '_' % 32 * pdc_fwidth;
-        src->y = '_' / 32 * pdc_fheight;
+        src->x = '_' % 16 * pdc_fwidth;
+        src->y = '_' / 16 * pdc_fheight;
 
         if (backgr != -1)
             SDL_SetColorKey(pdc_font, SDL_SRCCOLORKEY, 0);

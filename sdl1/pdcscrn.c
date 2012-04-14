@@ -212,9 +212,18 @@ int PDC_scr_open(int argc, char **argv)
 	if(!pdc_tileset) {
 		pdc_unscaled_tileset = SDL_LoadBMP("tileset.bmp");
 		if(pdc_unscaled_tileset) {
-			double scale = ((double) pdc_fwidth * 16) / pdc_unscaled_tileset->w; 
-			pdc_tileset = ScaleSurface(pdc_unscaled_tileset, pdc_fwidth * 16, (int) (scale * pdc_unscaled_tileset->h));
-		}
+            // guide to how one can deduce the new height of the scaled bmp
+            // ------------------------------------------------------------
+            // int original_height = (pdc_unscaled_font->h / 16);
+            // int number_rows = pdc_unscaled_tileset->h / original_height;
+            // int newheight = number_rows * pdc_fheight;
+            
+            // but this could lead to rounding errors, so instead do it in one go
+            int newheight = pdc_unscaled_tileset->h * 16 * pdc_fheight / pdc_unscaled_font->h;
+            
+			pdc_tileset = ScaleSurface(pdc_unscaled_tileset, pdc_fwidth * 16, newheight );
+            SDL_SaveBMP(pdc_tileset, "scaled.bmp");
+        }
 	}
 	if(!pdc_tileset) {
 		fprintf(stderr, "Could not load tileset\n");
